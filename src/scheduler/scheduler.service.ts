@@ -1,7 +1,8 @@
-import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../config/configuration';
-import { OLX_SCRAPER, OlxListing, OlxScraper } from '../olx-scraper/olx-scraper.interface';
+import { Listing, listingKey } from '../sources/listing.interface';
+import { SourceRegistry } from '../sources/source-registry.service';
 import { SeenListingsRepository } from '../persistence/seen-listings.repository';
 import {
   matchesCriteria,
@@ -14,14 +15,15 @@ import { TelegramService } from '../telegram/telegram.service';
 /**
  * The polling loop. One self-rescheduling cycle:
  *   1. load all active (non-paused) profiles
- *   2. group them by search signature so identical searches hit OLX ONCE
- *   3. per group: fetch, then diff each profile against its Redis seen-hash
+ *   2. group them by search signature so identical searches fetch ONCE
+ *   3. per group: fetch from ALL active sources, then diff each profile against
+ *      its Redis seen-hash (keyed by `source:id`, so sites can't collide)
  *   4. notify on new / price-changed listings; mark seen only AFTER a send
  *   5. reschedule with jitter
  *
- * Resilience: the scraper never throws (returns []), each profile is processed
- * in its own try/catch, and each notification is isolated — so one user's
- * blocked bot or one bad fetch can't stop the loop for everyone else.
+ * Resilience: every source returns [] on failure, each profile is processed in
+ * its own try/catch, and each notification is isolated — so one user's blocked
+ * bot, one bad fetch, or one broken source can't stop the loop for everyone.
  */
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
@@ -37,7 +39,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly profiles: SearchProfilesService,
     private readonly seen: SeenListingsRepository,
     private readonly telegram: TelegramService,
-    @Inject(OLX_SCRAPER) private readonly scraper: OlxScraper,
+    private readonly sources: SourceRegistry,
   ) {
     const polling = config.get('polling', { infer: true });
     this.intervalMs = polling.intervalMs;
@@ -95,7 +97,7 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Group by search signature to dedupe OLX fetches.
+    // Group by search signature so identical searches fetch once per cycle.
     const groups = new Map<string, SearchProfile[]>();
     for (const p of active) {
       const sig = searchSignature(p.criteria);
@@ -105,12 +107,14 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.logger.debug(
-      `Cycle: ${active.length} active profile(s) across ${groups.size} unique search(es).`,
+      `Cycle: ${active.length} active profile(s) across ${groups.size} unique search(es), ` +
+        `${this.sources.count} source(s).`,
     );
 
     for (const bucket of groups.values()) {
-      // Every profile in a bucket shares identical criteria.
-      const listings = await this.scraper.fetchListings(bucket[0].criteria);
+      // Every profile in a bucket shares identical criteria — fetch from all
+      // active sources once, then diff each profile against the merged set.
+      const listings = await this.sources.fetchAll(bucket[0].criteria);
       for (const profile of bucket) {
         try {
           await this.processProfile(profile, listings);
@@ -123,15 +127,15 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async processProfile(profile: SearchProfile, listings: OlxListing[]): Promise<void> {
+  private async processProfile(profile: SearchProfile, listings: Listing[]): Promise<void> {
     const matched = listings.filter((l) => matchesCriteria(l, profile.criteria));
 
     // First ever poll: seed the seen-hash silently so activating a profile
-    // doesn't blast the user with every pre-existing listing.
+    // doesn't blast the user with every pre-existing listing (across all sources).
     if (!profile.primed) {
       await this.seen.seed(
         profile.id,
-        matched.map((l) => ({ id: l.id, price: l.price })),
+        matched.map((l) => ({ id: listingKey(l), price: l.price })),
       );
       profile.primed = true;
       await this.profiles.update(profile);
@@ -144,14 +148,15 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     const seenMap = await this.seen.getAll(profile.id);
 
     for (const listing of matched) {
-      const stored = seenMap.get(listing.id);
+      const key = listingKey(listing); // "source:id" — namespaced across sites
+      const stored = seenMap.get(key);
 
       if (stored === undefined) {
-        await this.deliver(profile, listing, () =>
+        await this.deliver(profile, key, listing, () =>
           this.telegram.notifyNewListing(profile, listing),
         );
       } else if (stored !== listing.price) {
-        await this.deliver(profile, listing, () =>
+        await this.deliver(profile, key, listing, () =>
           this.telegram.notifyPriceChange(profile, listing, stored),
         );
       }
@@ -166,15 +171,16 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
    */
   private async deliver(
     profile: SearchProfile,
-    listing: OlxListing,
+    key: string,
+    listing: Listing,
     send: () => Promise<void>,
   ): Promise<void> {
     try {
       await send();
-      await this.seen.markSeen(profile.id, listing.id, listing.price);
+      await this.seen.markSeen(profile.id, key, listing.price);
     } catch (err) {
       this.logger.warn(
-        `Notify failed for listing ${listing.id} -> user ${profile.userId}: ${
+        `Notify failed for ${key} -> user ${profile.userId}: ${
           (err as Error).message
         } (will retry next cycle)`,
       );

@@ -1,4 +1,4 @@
-import { OlxListing, SearchCriteria } from '../olx-scraper/olx-scraper.interface';
+import { Listing, SearchCriteria } from '../sources/listing.interface';
 
 /**
  * A user's saved search. Persisted as JSON in Redis under
@@ -47,7 +47,7 @@ export function searchSignature(c: SearchCriteria): string {
  * Client-side safety net: even if the scraper's URL filters are imperfect (or
  * a source ignores a param), never notify about something outside the range.
  */
-export function matchesCriteria(listing: OlxListing, c: SearchCriteria): boolean {
+export function matchesCriteria(listing: Listing, c: SearchCriteria): boolean {
   if (c.ownerOnly && listing.isBusiness) return false;
 
   if (listing.price !== null) {

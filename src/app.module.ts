@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './config/configuration';
-import { OlxScraperModule } from './olx-scraper/olx-scraper.module';
+import { SourcesModule } from './sources/sources.module';
 import { PersistenceModule } from './persistence/persistence.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SearchProfilesModule } from './search-profiles/search-profiles.module';
@@ -16,7 +16,7 @@ import { TelegramModule } from './telegram/telegram.module';
       cache: true,
     }),
     PersistenceModule, // @Global — Redis client + repositories everywhere
-    OlxScraperModule,
+    SourcesModule,
     SearchProfilesModule,
     TelegramModule,
     SchedulerModule,

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { ProfilesRepository } from '../persistence/profiles.repository';
 import { SeenListingsRepository } from '../persistence/seen-listings.repository';
-import { SearchCriteria } from '../olx-scraper/olx-scraper.interface';
+import { SearchCriteria } from '../sources/listing.interface';
 import { defaultProfileName, SearchProfile } from './search-profile.model';
 
 /**

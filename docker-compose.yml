@@ -25,6 +25,7 @@ services:
       # Non-secret operational config (overridable via the deploy shell env).
       - REDIS_KEY_PREFIX=${REDIS_KEY_PREFIX:-olx}
       - SCRAPER=${SCRAPER:-http}
+      - SOURCES=${SOURCES:-olx,rieltor,domria,lun,flatfy,birdrent,josti}
       - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-300000}
       - POLL_JITTER_MS=${POLL_JITTER_MS:-60000}
       - OLX_BASE_URL=${OLX_BASE_URL:-https://www.olx.ua}
@@ -37,6 +38,7 @@ services:
       - TELEGRAM_BOT_TOKEN
       - ALLOWED_USER_IDS
       - HTTP_PROXY_URL
+      - DOMRIA_API_KEY
     depends_on:
       redis:
         condition: service_healthy

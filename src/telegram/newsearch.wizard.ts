@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Ctx, Wizard, WizardStep } from 'nestjs-telegraf';
 import { Markup, Scenes } from 'telegraf';
-import { SearchCriteria } from '../olx-scraper/olx-scraper.interface';
+import { SearchCriteria } from '../sources/listing.interface';
 import { SearchProfilesService } from '../search-profiles/search-profiles.service';
 import { CANCELLED, describeProfile } from './telegram.copy';
 import {

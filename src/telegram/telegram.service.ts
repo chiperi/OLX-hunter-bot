@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf, Context } from 'telegraf';
-import { OlxListing } from '../olx-scraper/olx-scraper.interface';
+import { Listing } from '../sources/listing.interface';
 import { SearchProfile } from '../search-profiles/search-profile.model';
 import { esc } from './telegram.copy';
 
@@ -20,14 +20,14 @@ export class TelegramService {
 
   constructor(@InjectBot() private readonly bot: Telegraf<Context>) {}
 
-  async notifyNewListing(profile: SearchProfile, listing: OlxListing): Promise<void> {
+  async notifyNewListing(profile: SearchProfile, listing: Listing): Promise<void> {
     const caption = this.buildCaption('🆕 <b>Нове оголошення</b>', profile, listing);
     await this.send(profile.chatId, caption, listing.imageUrl);
   }
 
   async notifyPriceChange(
     profile: SearchProfile,
-    listing: OlxListing,
+    listing: Listing,
     oldPrice: number | null,
   ): Promise<void> {
     const arrow =
@@ -54,7 +54,7 @@ export class TelegramService {
   private buildCaption(
     header: string,
     profile: SearchProfile,
-    listing: OlxListing,
+    listing: Listing,
     includePrice = true,
   ): string {
     const lines: string[] = [header, '', `<b>${esc(listing.title)}</b>`];
@@ -69,10 +69,12 @@ export class TelegramService {
     if (where) {
       lines.push(`📍 ${where}`);
     }
-    lines.push(`👤 ${listing.isBusiness ? 'Ріелтор/агенція' : 'Власник'}`);
+    lines.push(
+      `👤 ${listing.isBusiness ? 'Ріелтор/агенція' : 'Власник'}   🌐 ${esc(listing.sourceLabel)}`,
+    );
     lines.push('');
     lines.push(`🔎 Пошук: ${esc(profile.name)}`);
-    lines.push(`<a href="${esc(listing.url)}">Відкрити на OLX ↗</a>`);
+    lines.push(`<a href="${esc(listing.url)}">Відкрити на ${esc(listing.sourceLabel)} ↗</a>`);
 
     return lines.join('\n');
   }
