@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-REPO="${REPO:-chiperi/OLX-hunter-bot}"
+REPO="${REPO:-chiperi/flat-hunter-bot}"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "❌ GitHub CLI 'gh' not found." >&2

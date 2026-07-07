@@ -51,7 +51,7 @@ jobs:
       SSH_HOST: ${{ secrets.DO_FLAT_HUNTER_HOST }}
       SSH_USER: ${{ secrets.DO_FLAT_HUNTER_USER }}
       SSH_PORT: ${{ secrets.DO_FLAT_HUNTER_SSH_PORT }}
-      DEPLOY_PATH: /opt/olx-bot
+      DEPLOY_PATH: /opt/flat-hunter-bot
     steps:
       - uses: actions/checkout@v4
 
@@ -91,7 +91,7 @@ jobs:
           # hands them to the container at `up`. No .env is ever written.
           ssh -p "$PORT" -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
-          cd /opt/olx-bot
+          cd /opt/flat-hunter-bot
 
           # Purge any legacy plaintext secrets file left from an earlier setup.
           rm -f .env
@@ -125,7 +125,7 @@ jobs:
           sleep 8
           ssh -p "$PORT" -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
-          cd /opt/olx-bot
+          cd /opt/flat-hunter-bot
           if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
           state="$($DC ps --format '{{.Service}} {{.State}}' 2>/dev/null || true)"
           echo "$state"

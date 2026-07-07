@@ -1,9 +1,9 @@
-# OLX Hunter Bot — isolated stack.
+# Flat Hunter Bot — isolated stack.
 #
-# Deployed on the shared DigitalOcean droplet under /opt/olx-bot/, fully
+# Deployed on the shared DigitalOcean droplet under /opt/flat-hunter-bot/, fully
 # separate from the existing `aurora` project:
-#   - dedicated bridge network (olx-bot-net)
-#   - dedicated named volume (olx-redis-data)
+#   - dedicated bridge network (flat-hunter-net)
+#   - dedicated named volume (flat-hunter-redis-data)
 #   - NO ports published to the host (the bot only makes outbound calls)
 #
 # Secrets are NOT stored on the droplet. There is no `.env` file here in
@@ -16,8 +16,8 @@
 services:
   app:
     build: .
-    image: olx-hunter-bot:latest
-    container_name: olx-bot-app
+    image: flat-hunter-bot:latest
+    container_name: flat-hunter-app
     restart: unless-stopped
     environment:
       # Talk to the redis service by its compose name, on the private network.
@@ -41,28 +41,28 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - olx-bot-net
+      - flat-hunter-net
 
   redis:
     image: redis:7-alpine
-    container_name: olx-bot-redis
+    container_name: flat-hunter-redis
     restart: unless-stopped
     # Persist dedup state + profiles across restarts (append-only file).
     command: ['redis-server', '--appendonly', 'yes']
     volumes:
-      - olx-redis-data:/data
+      - flat-hunter-redis-data:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 3s
       retries: 5
     networks:
-      - olx-bot-net
+      - flat-hunter-net
 
 networks:
-  olx-bot-net:
+  flat-hunter-net:
     driver: bridge
 
 volumes:
-  olx-redis-data:
+  flat-hunter-redis-data:
     driver: local

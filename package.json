@@ -1,5 +1,5 @@
 {
-  "name": "olx-hunter-bot",
+  "name": "flat-hunter-bot",
   "version": "1.0.0",
   "description": "Telegram bot that monitors OLX housing listings against user-defined filters and sends instant notifications on new / price-changed listings.",
   "license": "MIT",

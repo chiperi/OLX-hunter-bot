@@ -43,7 +43,7 @@ async function bootstrap(): Promise<void> {
   // stops cleanly, and Redis disconnects.
   app.enableShutdownHooks();
 
-  logger.log('🚀 OLX Hunter Bot is running (Telegram long polling).');
+  logger.log('🚀 Flat Hunter Bot is running (Telegram long polling).');
 }
 
 bootstrap().catch((err) => {

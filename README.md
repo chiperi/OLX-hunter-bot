@@ -1,4 +1,4 @@
-# OLX Hunter Bot 🏠🔎
+# Flat Hunter Bot 🏠🔎
 
 A Telegram bot that monitors **OLX** housing listings against user-defined
 filters and sends **instant notifications** when a new matching listing appears —
@@ -130,7 +130,7 @@ getting (fake) notifications within a poll cycle.
 
 ## Deployment
 
-Runs fully isolated under `/opt/olx-bot/`, separate from the existing `aurora`
+Runs fully isolated under `/opt/flat-hunter-bot/`, separate from the existing `aurora`
 stack: its own Compose project, its own bridge network, its own Redis volume,
 **no published ports**.
 
@@ -140,7 +140,7 @@ at deploy time (see below). Just configure the secrets once and push to `main`.
 
 ### Secrets stay off the droplet's disk
 
-Instead of a plaintext `.env` sitting in `/opt/olx-bot/`, the deploy passes
+Instead of a plaintext `.env` sitting in `/opt/flat-hunter-bot/`, the deploy passes
 `TELEGRAM_BOT_TOKEN` / `ALLOWED_USER_IDS` / `HTTP_PROXY_URL` into the deploy
 shell over the encrypted SSH channel (via stdin — never as `ps`-visible args and
 never to a file), and Compose's pass-through `environment:` hands them to the
@@ -167,7 +167,7 @@ and PR:
 
 - **`build`** (all pushes + PRs): `npm ci` + `npm run build` — the typecheck gate.
 - **`deploy`** (push to `main` or manual **Run workflow**): `rsync`es the repo to
-  `/opt/olx-bot/`, then runs `docker compose up -d --build` on the droplet and a
+  `/opt/flat-hunter-bot/`, then runs `docker compose up -d --build` on the droplet and a
   post-deploy health check that fails the run if a container crash-loops.
 
 No container registry — the droplet builds its own image, matching the `aurora`
@@ -206,16 +206,16 @@ Or add each manually in the GitHub UI (link above).
 
 ```bash
 # 1. On your machine: generate a dedicated deploy key (no passphrase)
-ssh-keygen -t ed25519 -f ./olx_deploy_key -C "olx-bot-ci" -N ""
+ssh-keygen -t ed25519 -f ./flat_hunter_deploy -C "flat-hunter-ci" -N ""
 
 # 2. Authorize its PUBLIC key on the droplet
-ssh-copy-id -i ./olx_deploy_key.pub <user>@<droplet-host>
-#   (or append olx_deploy_key.pub to ~/.ssh/authorized_keys manually)
+ssh-copy-id -i ./flat_hunter_deploy.pub <user>@<droplet-host>
+#   (or append flat_hunter_deploy.pub to ~/.ssh/authorized_keys manually)
 
-# 3. Put the PRIVATE key into the DO_SSH_PRIVATE_KEY secret
-cat ./olx_deploy_key      # copy the whole output, incl. BEGIN/END lines
+# 3. Put the PRIVATE key into the DO_FLAT_HUNTER_SSH_PRIVATE_KEY secret
+cat ./flat_hunter_deploy      # copy the whole output, incl. BEGIN/END lines
 
-# 4. Ensure the droplet has Docker + the Compose v2 plugin. A non-root DO_USER
+# 4. Ensure the droplet has Docker + the Compose v2 plugin. A non-root DO_FLAT_HUNTER_USER
 #    must be able to run docker:  sudo usermod -aG docker <user>
 #    (No .env to create — the app secrets above are injected by the deploy.)
 ```
