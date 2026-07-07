@@ -99,6 +99,15 @@ jobs:
           export TELEGRAM_BOT_TOKEN='${{ secrets.FLAT_HUNTER_TELEGRAM_BOT_TOKEN }}'
           export ALLOWED_USER_IDS='${{ secrets.FLAT_HUNTER_ALLOWED_USER_IDS }}'
           export HTTP_PROXY_URL='${{ secrets.FLAT_HUNTER_HTTP_PROXY_URL }}'
+          export DOMRIA_API_KEY='${{ secrets.FLAT_HUNTER_DOMRIA_API_KEY }}'
+
+          # Runtime mode/config — SAFE DEFAULTS (mock, single source, 10-min poll).
+          # Flip to real scraping later WITHOUT a code change by setting repo
+          # Variables (Settings -> Secrets and variables -> Actions -> Variables):
+          #   SCRAPER=http   SOURCES=olx,domria   POLL_INTERVAL_MS=600000
+          export SCRAPER='${{ vars.SCRAPER || 'mock' }}'
+          export SOURCES='${{ vars.SOURCES || 'olx' }}'
+          export POLL_INTERVAL_MS='${{ vars.POLL_INTERVAL_MS || '600000' }}'
 
           # Prefer the Docker Compose v2 plugin; fall back to legacy docker-compose.
           if docker compose version >/dev/null 2>&1; then

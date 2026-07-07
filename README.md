@@ -268,6 +268,23 @@ brew install gh && gh auth login      # one time
 
 Or add each manually in the GitHub UI (link above).
 
+### Runtime mode & sources (repo Variables)
+
+Non-secret runtime config is driven by GitHub **Variables** (Settings → Secrets
+and variables → Actions → **Variables**), so you can change how prod runs without
+editing code — just set the variable and re-deploy. Safe defaults ship in the
+workflow:
+
+| Variable | Default | Set it to… |
+|---|---|---|
+| `SCRAPER` | `mock` | `http` when ready for real scraping |
+| `SOURCES` | `olx` | e.g. `olx,domria` to add sites |
+| `POLL_INTERVAL_MS` | `600000` | raise/lower the poll interval (ms) |
+
+So the **first deploy runs in `mock`** (bot fully works on fake data, zero
+external requests). To go live: set `SCRAPER=http`, pick `SOURCES`, add the
+`FLAT_HUNTER_DOMRIA_API_KEY` secret if using `domria`, and re-run the deploy.
+
 ### One-time droplet setup
 
 ```bash
