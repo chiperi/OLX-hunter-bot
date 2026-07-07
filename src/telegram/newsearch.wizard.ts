@@ -120,9 +120,10 @@ export class NewSearchWizard {
     st.areaMax = max;
     await ctx.reply(
       '5️⃣ Показувати оголошення <b>лише від власників</b> чи також від ріелторів?',
-      Markup.keyboard([[OWNER_ONLY_LABEL], [INCLUDE_ALL_LABEL]])
-        .oneTime()
-        .resize(),
+      {
+        parse_mode: 'HTML',
+        ...Markup.keyboard([[OWNER_ONLY_LABEL], [INCLUDE_ALL_LABEL]]).oneTime().resize(),
+      },
     );
     ctx.wizard.next();
   }
