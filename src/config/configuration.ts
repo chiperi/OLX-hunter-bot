@@ -66,6 +66,15 @@ export default (): AppConfig => {
   if (!botToken) {
     throw new Error('TELEGRAM_BOT_TOKEN is required but was not provided.');
   }
+  // Fail fast with a clear message on a malformed token, instead of an opaque
+  // "404 Not Found" from Telegram deep inside bot.launch(). A real token is
+  // "<digits>:<hash>" from @BotFather.
+  if (!/^\d{6,}:[A-Za-z0-9_-]{20,}$/.test(botToken)) {
+    throw new Error(
+      'TELEGRAM_BOT_TOKEN looks malformed — expected "<digits>:<hash>" from @BotFather. ' +
+        'Check for a partial paste, extra characters, or a line break.',
+    );
+  }
 
   const mode = (process.env.SCRAPER?.trim() as SourceMode) || 'mock';
   if (mode !== 'mock' && mode !== 'http') {

@@ -20,8 +20,12 @@ function logLevels(): LogLevel[] {
 function installProcessGuards(logger: Logger): void {
   process.on('unhandledRejection', (reason: unknown) => {
     const err = reason as { response?: { error_code?: number }; message?: string };
-    if (err?.response?.error_code === 401) {
-      logger.error('Telegram rejected the bot token (401). Check TELEGRAM_BOT_TOKEN.');
+    const code = err?.response?.error_code;
+    if (code === 401 || code === 404) {
+      logger.error(
+        `Telegram rejected the bot token (${code}). Check TELEGRAM_BOT_TOKEN — it must be ` +
+          'the full "<digits>:<hash>" from @BotFather (a 404 usually means a malformed/partial token).',
+      );
     } else {
       logger.error(`Unhandled rejection: ${err?.message ?? String(reason)}`);
     }
