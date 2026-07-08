@@ -166,7 +166,7 @@ export class NewSearchWizard {
     if (text === OTHER || /^інше/i.test(text)) {
       st.stage = 'priceManual';
       await ctx.reply(
-        'Введіть <b>ціну</b> (грн): <code>5000-15000</code>, <code>до 20000</code>, ' +
+        'Введіть <b>ціну</b> (грн): напр. <code>від 5000 до 15000</code>, <code>до 20000</code>, ' +
           '<code>від 5000</code> або <code>-</code> щоб не обмежувати.',
         { ...HTML, ...Markup.removeKeyboard() },
       );
@@ -185,8 +185,8 @@ export class NewSearchWizard {
     if (text === OTHER || /^інше/i.test(text)) {
       st.stage = 'areaManual';
       await ctx.reply(
-        'Введіть <b>площу</b> (м²): <code>30-60</code>, <code>від 40</code>, ' +
-          '<code>до 80</code> або <code>-</code> щоб не обмежувати.',
+        'Введіть <b>площу</b> (м²): напр. <code>від 30 до 60</code>, <code>до 80</code>, ' +
+          '<code>від 40</code> або <code>-</code> щоб не обмежувати.',
         { ...HTML, ...Markup.removeKeyboard() },
       );
       return;
