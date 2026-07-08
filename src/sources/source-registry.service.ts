@@ -32,6 +32,16 @@ export class SourceRegistry {
   }
 
   /**
+   * The upstream request key for a (source, criteria) — used by the scheduler to
+   * dedup profiles that resolve to the same real request. Falls back to the full
+   * criteria when a source doesn't define one.
+   */
+  requestKey(sourceId: string, criteria: SearchCriteria): string {
+    const source = this.sources.find((s) => s.id === sourceId);
+    return source?.requestKey?.(criteria) ?? JSON.stringify(criteria);
+  }
+
+  /**
    * Fetch from a SINGLE source (per-site filters target one site each).
    * Returns [] if the source isn't active or throws.
    */

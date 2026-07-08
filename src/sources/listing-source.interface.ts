@@ -16,4 +16,12 @@ export interface ListingSource {
   /** Human label for notifications, e.g. 'OLX'. */
   readonly label: string;
   fetchListings(criteria: SearchCriteria): Promise<Listing[]>;
+  /**
+   * Key identifying the ACTUAL upstream request for these criteria. Two profiles
+   * whose criteria differ only in fields the source filters client-side (e.g.
+   * DOM.RIA price/area) yield the same key, so the scheduler fetches once and
+   * shares the result — saving API quota. Optional; defaults to the full
+   * criteria (no extra dedup).
+   */
+  requestKey?(criteria: SearchCriteria): string;
 }

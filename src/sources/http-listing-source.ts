@@ -25,6 +25,8 @@ export interface SiteSpec {
   kind?: 'html' | 'json';
   buildUrl?(criteria: SearchCriteria, cfg: SourcesConfig): string | null;
   parse?(payload: any, cfg: SourcesConfig): RawListing[];
+  /** Optional: the key identifying the real upstream request (for dedup). */
+  requestKey?(criteria: SearchCriteria, cfg: SourcesConfig): string;
 }
 
 /**
@@ -64,6 +66,13 @@ export class HttpListingSource implements ListingSource {
   async fetchListings(criteria: SearchCriteria): Promise<Listing[]> {
     const raw = await this.fetchReal(criteria);
     return raw.map((l) => ({ ...l, source: this.id, sourceLabel: this.label }));
+  }
+
+  /** The real upstream request key — for cross-profile dedup in the scheduler. */
+  requestKey(criteria: SearchCriteria): string {
+    if (this.spec.requestKey) return this.spec.requestKey(criteria, this.cfg);
+    if (this.spec.buildUrl) return this.spec.buildUrl(criteria, this.cfg) ?? this.id;
+    return JSON.stringify(criteria);
   }
 
   // --- real fetch ---------------------------------------------------------
