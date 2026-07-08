@@ -342,9 +342,22 @@ See [`.env.example`](.env.example) for the annotated list. Highlights:
 npm run start:dev    # watch mode
 npm run build        # compile to dist/
 npm run start:prod   # run compiled build
+npm test             # run the unit test suite
+npm run test:cov     # tests + coverage (enforces an 80% threshold)
 npm run lint         # eslint --fix
 npm run format       # prettier
 ```
+
+### Testing
+
+Unit tests (Jest) cover the logic-heavy code — config parsing, the range/owner
+parsers, the listing parsers + site specs, the scheduler diff/prime logic, the
+Redis repositories (via `ioredis-mock`), the source registry, the notification
+formatting, the `/newsearch` state machine and the command/action handlers.
+External I/O (Redis, Telegram, axios) is mocked, so the suite is fast and
+network-free. Coverage sits around **96% statements / 98% lines**, and
+`npm run test:cov` fails under an 80% threshold — it also runs in CI on every
+push/PR.
 
 ---
 
