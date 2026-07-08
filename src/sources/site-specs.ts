@@ -140,12 +140,26 @@ function domriaPhoto(mainPhoto?: string): string | undefined {
   return `https://cdn.riastatic.com/photos/${String(mainPhoto).replace(/(\.jpg)$/i, 'b$1')}`;
 }
 
+/**
+ * Price in hryvnia, whatever currency the seller listed in. DOM.RIA returns the
+ * same price in every currency via `priceArr` — key "3" is always UAH (1=USD,
+ * 2=EUR, 3=UAH), already converted at the current rate. So we never rely on the
+ * raw `price` (which is in the seller's currency) and never mislabel $/€ as грн.
+ */
+function domriaUahPrice(info: any): number | null {
+  const uah = toInt(info?.priceArr?.['3']); // "25 000" → 25000 (toInt strips spaces)
+  if (uah != null) return uah;
+  // No UAH figure → trust `price` only when it's already hryvnia.
+  if (toInt(info?.currency_type_id) === 3) return toInt(info?.price ?? info?.price_total);
+  return null; // foreign price with no UAH value → "Ціна договірна", not a wrong number
+}
+
 function mapDomriaInfo(info: any, id: number | string): RawListing {
   const area = toFloat(info?.total_square_meters);
   return {
     id: String(id),
     title: domriaTitle(info, id),
-    price: toInt(info?.price ?? info?.priceArr?.['3']),
+    price: domriaUahPrice(info),
     currency: 'грн',
     area: area === null ? null : Math.round(area),
     rooms: toInt(info?.rooms_count),
