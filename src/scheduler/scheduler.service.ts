@@ -27,6 +27,9 @@ import { TelegramService } from '../telegram/telegram.service';
  */
 @Injectable()
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
+  /** How many current matches to surface on a filter's first poll. */
+  private static readonly INITIAL_SHOW = 5;
+
   private readonly logger = new Logger(SchedulerService.name);
   private readonly intervalMs: number;
   private readonly jitterMs: number;
@@ -133,17 +136,26 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private async processProfile(profile: SearchProfile, listings: Listing[]): Promise<void> {
     const matched = listings.filter((l) => matchesCriteria(l, profile.criteria));
 
-    // First ever poll: seed the seen-hash silently so activating a profile
-    // doesn't blast the user with every pre-existing listing (across all sources).
+    // First ever poll: show the newest few current matches (so a fresh filter
+    // isn't empty and the user sees it works), and silently record the rest —
+    // avoids a flood while still giving immediate results. Sources return
+    // newest-first, so the head of `matched` is the freshest.
     if (!profile.primed) {
+      const toShow = matched.slice(0, SchedulerService.INITIAL_SHOW);
+      const toSeed = matched.slice(SchedulerService.INITIAL_SHOW);
       await this.seen.seed(
         profile.id,
-        matched.map((l) => ({ id: listingKey(l), price: l.price })),
+        toSeed.map((l) => ({ id: listingKey(l), price: l.price })),
       );
+      for (const listing of toShow) {
+        await this.deliver(profile, listingKey(listing), listing, () =>
+          this.telegram.notifyNewListing(profile, listing),
+        );
+      }
       profile.primed = true;
       await this.profiles.update(profile);
       this.logger.log(
-        `Primed profile ${profile.id} with ${matched.length} existing listing(s).`,
+        `Primed profile ${profile.id}: showed ${toShow.length}, seeded ${toSeed.length}.`,
       );
       return;
     }
