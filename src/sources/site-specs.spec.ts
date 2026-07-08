@@ -93,6 +93,8 @@ describe('DOM.RIA spec', () => {
         rooms_count: 2,
         total_square_meters: '50',
         price: 9000,
+        currency_type_id: 3,
+        priceArr: { '1': '215', '2': '200', '3': '9 000' },
         city_name: 'Київ',
         street_name: 'Хрещатик',
         beautiful_url: 'realty-1',
@@ -119,6 +121,37 @@ describe('DOM.RIA spec', () => {
       url: 'https://dom.ria.com/uk/realty-1',
       imageUrl: 'https://cdn.riastatic.com/photos/a/b/p1b.jpg',
     });
+  });
+
+  it('converts a foreign-currency price to UAH via priceArr["3"]', async () => {
+    const dcfg = { ...cfg, domria: { ...cfg.domria, apiKey: 'k' } };
+    const getJson = jest
+      .fn()
+      .mockResolvedValueOnce({ items: [7] })
+      .mockResolvedValueOnce({
+        rooms_count: 1,
+        total_square_meters: '40',
+        // Seller listed in USD; the raw `price` is dollars, not hryvnia.
+        price: 500,
+        currency_type_id: 1,
+        priceArr: { '1': '500', '2': '460', '3': '20 500' },
+        city_name: 'Київ',
+        beautiful_url: 'realty-7',
+      });
+    const ctx = { cfg: dcfg, getHtml: jest.fn(), getJson };
+    const res = await SITE_SPECS.domria.fetch!(ctx as any, criteria);
+    expect(res[0]).toMatchObject({ price: 20500, currency: 'грн' }); // $500 → ₴20 500
+  });
+
+  it('falls back to "no price" when a foreign price has no UAH figure', async () => {
+    const dcfg = { ...cfg, domria: { ...cfg.domria, apiKey: 'k' } };
+    const getJson = jest
+      .fn()
+      .mockResolvedValueOnce({ items: [8] })
+      .mockResolvedValueOnce({ price: 500, currency_type_id: 1, city_name: 'Київ' });
+    const ctx = { cfg: dcfg, getHtml: jest.fn(), getJson };
+    const res = await SITE_SPECS.domria.fetch!(ctx as any, criteria);
+    expect(res[0].price).toBeNull(); // never mislabel $500 as 500 грн
   });
 
   it('fetches details only for NEW ids on a second cycle (opt-2 cache)', async () => {
