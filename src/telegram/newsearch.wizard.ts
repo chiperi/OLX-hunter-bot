@@ -18,7 +18,7 @@ export const NEWSEARCH_SCENE = 'newsearch';
 const CITY_KYIV = '🏙 Київ';
 const CITY_OTHER = '✏️ Інше місто';
 const ANY_DISTRICT = '🏙 Будь-який район';
-const AREA_OTHER = '✏️ Інше';
+const OTHER = '✏️ Інше';
 const KYIV_DISTRICTS = [
   'Голосіївський',
   'Дарницький',
@@ -38,6 +38,7 @@ type Stage =
   | 'districtKyiv'
   | 'districtManual'
   | 'price'
+  | 'priceManual'
   | 'area'
   | 'areaManual'
   | 'owner';
@@ -64,7 +65,7 @@ const HTML = { parse_mode: 'HTML' as const };
  *   city [Київ | Інше місто]
  *     Київ  → district buttons (10 raions + "будь-який")
  *     Інше  → type city → type district
- *   price (free text)
+ *   price [до 10000 | до 20000 | до 30000 | Інше→free text]
  *   area  [30–60 | до 45 | до 80 | Інше→free text]
  *   owner [лише власники | усі]  → save
  */
@@ -109,6 +110,8 @@ export class NewSearchWizard {
         return this.handleDistrict(ctx, st, parseOptionalText(text));
       case 'price':
         return this.handlePrice(ctx, st, text);
+      case 'priceManual':
+        return this.handlePriceManual(ctx, st, text);
       case 'area':
         return this.handleArea(ctx, st, text);
       case 'areaManual':
@@ -156,27 +159,30 @@ export class NewSearchWizard {
 
   private async handleDistrict(ctx: Scenes.SceneContext, st: WizardState, district?: string) {
     st.district = district;
-    st.stage = 'price';
-    await ctx.reply(
-      '3️⃣ <b>Ціна</b> (грн)? Формати: <code>5000-15000</code>, <code>до 15000</code>, ' +
-        '<code>від 5000</code> або <code>-</code> щоб не обмежувати.',
-      { ...HTML, ...Markup.removeKeyboard() },
-    );
+    await this.askPrice(ctx, st);
   }
 
   private async handlePrice(ctx: Scenes.SceneContext, st: WizardState, text: string) {
-    const { min, max } = parseRange(text);
-    st.priceMin = min;
-    st.priceMax = max;
-    st.stage = 'area';
-    await ctx.reply('4️⃣ Оберіть <b>площу</b> (м²) або натисніть «Інше», щоб ввести вручну:', {
-      ...HTML,
-      ...Markup.keyboard([['30–60', 'до 45', 'до 80'], [AREA_OTHER]]).oneTime().resize(),
-    });
+    if (text === OTHER || /^інше/i.test(text)) {
+      st.stage = 'priceManual';
+      await ctx.reply(
+        'Введіть <b>ціну</b> (грн): <code>5000-15000</code>, <code>до 20000</code>, ' +
+          '<code>від 5000</code> або <code>-</code> щоб не обмежувати.',
+        { ...HTML, ...Markup.removeKeyboard() },
+      );
+      return;
+    }
+    this.applyPrice(st, text);
+    await this.askArea(ctx, st);
+  }
+
+  private async handlePriceManual(ctx: Scenes.SceneContext, st: WizardState, text: string) {
+    this.applyPrice(st, text);
+    await this.askArea(ctx, st);
   }
 
   private async handleArea(ctx: Scenes.SceneContext, st: WizardState, text: string) {
-    if (text === AREA_OTHER || /^інше/i.test(text)) {
+    if (text === OTHER || /^інше/i.test(text)) {
       st.stage = 'areaManual';
       await ctx.reply(
         'Введіть <b>площу</b> (м²): <code>30-60</code>, <code>від 40</code>, ' +
@@ -236,12 +242,34 @@ export class NewSearchWizard {
     );
   }
 
+  private async askPrice(ctx: Scenes.SceneContext, st: WizardState) {
+    st.stage = 'price';
+    await ctx.reply('3️⃣ Оберіть <b>ціну</b> (грн) або натисніть «Інше», щоб ввести діапазон вручну:', {
+      ...HTML,
+      ...Markup.keyboard([['до 10000', 'до 20000', 'до 30000'], [OTHER]]).oneTime().resize(),
+    });
+  }
+
+  private async askArea(ctx: Scenes.SceneContext, st: WizardState) {
+    st.stage = 'area';
+    await ctx.reply('4️⃣ Оберіть <b>площу</b> (м²) або натисніть «Інше», щоб ввести вручну:', {
+      ...HTML,
+      ...Markup.keyboard([['30–60', 'до 45', 'до 80'], [OTHER]]).oneTime().resize(),
+    });
+  }
+
   private async askOwner(ctx: Scenes.SceneContext, st: WizardState) {
     st.stage = 'owner';
     await ctx.reply('5️⃣ Показувати оголошення <b>лише від власників</b> чи також від ріелторів?', {
       ...HTML,
       ...Markup.keyboard([[OWNER_ONLY_LABEL], [INCLUDE_ALL_LABEL]]).oneTime().resize(),
     });
+  }
+
+  private applyPrice(st: WizardState, text: string) {
+    const { min, max } = parseRange(text);
+    st.priceMin = min;
+    st.priceMax = max;
   }
 
   private applyArea(st: WizardState, text: string) {
