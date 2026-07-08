@@ -65,14 +65,25 @@ describe('SchedulerService.runCycle', () => {
     expect(sources.fetchOne).not.toHaveBeenCalled();
   });
 
-  it('primes a fresh profile silently', async () => {
+  it('primes a fresh profile: shows the first match, seeds nothing extra', async () => {
     const { scheduler, profiles, seen, telegram, sources } = build();
     profiles.listAll.mockResolvedValue([profile({ primed: false })]);
     sources.fetchOne.mockResolvedValue([listing({ id: '1' })]);
     await scheduler.runCycle();
-    expect(seen.seed).toHaveBeenCalledWith('p1', [{ id: 'olx:1', price: 10000 }]);
+    expect(telegram.notifyNewListing).toHaveBeenCalledTimes(1); // surfaced immediately
+    expect(seen.seed).toHaveBeenCalledWith('p1', []); // nothing beyond the shown one
     expect(profiles.update).toHaveBeenCalled();
-    expect(telegram.notifyNewListing).not.toHaveBeenCalled();
+  });
+
+  it('caps the initial batch to 5 and silently seeds the overflow', async () => {
+    const { scheduler, profiles, seen, telegram, sources } = build();
+    profiles.listAll.mockResolvedValue([profile({ primed: false })]);
+    sources.fetchOne.mockResolvedValue(
+      Array.from({ length: 8 }, (_, i) => listing({ id: String(i + 1) })),
+    );
+    await scheduler.runCycle();
+    expect(telegram.notifyNewListing).toHaveBeenCalledTimes(5);
+    expect(seen.seed.mock.calls[0][1]).toHaveLength(3);
   });
 
   it('notifies + marks seen for a new listing', async () => {
