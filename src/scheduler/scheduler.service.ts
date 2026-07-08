@@ -4,11 +4,7 @@ import { AppConfig } from '../config/configuration';
 import { Listing, listingKey } from '../sources/listing.interface';
 import { SourceRegistry } from '../sources/source-registry.service';
 import { SeenListingsRepository } from '../persistence/seen-listings.repository';
-import {
-  matchesCriteria,
-  searchSignature,
-  SearchProfile,
-} from '../search-profiles/search-profile.model';
+import { matchesCriteria, SearchProfile } from '../search-profiles/search-profile.model';
 import { SearchProfilesService } from '../search-profiles/search-profiles.service';
 import { TelegramService } from '../telegram/telegram.service';
 
@@ -102,11 +98,12 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Group by (source + search signature) so identical searches on the same
-    // site fetch once per cycle.
+    // Group by (source + upstream request key) so profiles that resolve to the
+    // SAME real request fetch once per cycle — e.g. two DOM.RIA searches for the
+    // same city+operation with different price/area share one API call.
     const groups = new Map<string, SearchProfile[]>();
     for (const p of active) {
-      const key = `${p.source}::${searchSignature(p.criteria)}`;
+      const key = `${p.source}::${this.sources.requestKey(p.source, p.criteria)}`;
       const bucket = groups.get(key);
       if (bucket) bucket.push(p);
       else groups.set(key, [p]);

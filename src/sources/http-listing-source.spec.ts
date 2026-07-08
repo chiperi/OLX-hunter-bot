@@ -86,4 +86,23 @@ describe('HttpListingSource', () => {
     const opts = (axios.create as jest.Mock).mock.calls.pop()![0];
     expect(opts.proxy).toBe(false);
   });
+
+  describe('requestKey', () => {
+    const c: SearchCriteria = { city: 'Київ', ownerOnly: false };
+    it('uses spec.requestKey when present', () => {
+      const s = new HttpListingSource({ id: 'd', label: 'D', requestKey: (cr) => `k:${cr.city}` }, cfg());
+      expect(s.requestKey(c)).toBe('k:Київ');
+    });
+    it('falls back to the built url', () => {
+      const s = new HttpListingSource(
+        { id: 't', label: 'T', kind: 'html', buildUrl: () => 'https://x/q', parse: () => [] },
+        cfg(),
+      );
+      expect(s.requestKey(c)).toBe('https://x/q');
+    });
+    it('falls back to the full criteria', () => {
+      const s = new HttpListingSource({ id: 'z', label: 'Z' }, cfg());
+      expect(s.requestKey(c)).toContain('Київ');
+    });
+  });
 });

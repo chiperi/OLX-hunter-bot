@@ -137,6 +137,10 @@ function domriaTitle(info: any, id: number): string {
 const domria: SiteSpec = {
   id: 'domria',
   label: 'DOM.RIA',
+  // The search API URL depends only on city (geo) + operation; price/area/rooms
+  // are filtered client-side. So two profiles differing only in those share one
+  // fetch — the scheduler dedups on this key to save API quota.
+  requestKey: (c) => `${(c.city ?? '').trim().toLowerCase()}|${c.operation ?? 'rent'}`,
   fetch: async (ctx, c) => {
     const { apiKey, baseUrl } = ctx.cfg.domria;
     if (!apiKey) return []; // no key → nothing to fetch (expected)

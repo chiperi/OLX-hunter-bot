@@ -45,6 +45,7 @@ const build = () => {
   const sources = {
     has: jest.fn().mockReturnValue(true),
     fetchOne: jest.fn().mockResolvedValue([]),
+    requestKey: jest.fn((_src: string, crit: any) => JSON.stringify(crit)),
     count: 1,
   };
   const scheduler = new SchedulerService(
@@ -118,12 +119,21 @@ describe('SchedulerService.runCycle', () => {
 
   it('dedupes identical searches to one fetch', async () => {
     const { scheduler, profiles, sources } = build();
-    profiles.listAll.mockResolvedValue([
-      profile({ id: 'p1' }),
-      profile({ id: 'p2' }),
-    ]);
+    profiles.listAll.mockResolvedValue([profile({ id: 'p1' }), profile({ id: 'p2' })]);
     await scheduler.runCycle();
     expect(sources.fetchOne).toHaveBeenCalledTimes(1);
+  });
+
+  it('dedupes by the source request key (same city, different price → one fetch)', async () => {
+    const { scheduler, profiles, sources } = build();
+    // Two DOM.RIA searches for the same city+operation but different budgets.
+    sources.requestKey.mockImplementation((src: string, c: any) => `${src}:${c.city}`);
+    profiles.listAll.mockResolvedValue([
+      profile({ id: 'p1', criteria: { city: 'Київ', priceMax: 20000, ownerOnly: false } }),
+      profile({ id: 'p2', criteria: { city: 'Київ', priceMax: 40000, ownerOnly: false } }),
+    ]);
+    await scheduler.runCycle();
+    expect(sources.fetchOne).toHaveBeenCalledTimes(1); // shared fetch → saves API quota
   });
 
   it('does not mark seen when the notification fails', async () => {
