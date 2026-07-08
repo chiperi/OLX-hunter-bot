@@ -34,6 +34,9 @@ jobs:
       - name: Compile (tsc via nest build)
         run: npm run build
 
+      - name: Test (with coverage gate)
+        run: npm run test:cov
+
   deploy:
     name: Deploy to droplet
     needs: build
