@@ -87,6 +87,20 @@ describe('NewSearchWizard', () => {
     expect(ctx.scene.state.stage).toBe('price');
   });
 
+  it('"будь-яка" area saves with no area bound', async () => {
+    const { wizard, profiles } = build();
+    const ctx = makeCtx();
+    ctx.scene.state = { stage: 'area', operation: 'rent', city: 'Київ', priceMin: 80000 };
+    await feed(wizard, ctx, 'Будь-яка');
+    expect(profiles.upsertForUser).toHaveBeenCalledWith(
+      7,
+      7,
+      expect.objectContaining({ priceMin: 80000, areaMin: undefined, areaMax: undefined }),
+      expect.any(String),
+    );
+    expect(ctx.scene.leave).toHaveBeenCalled();
+  });
+
   it('supports manual price and area via "Інше"', async () => {
     const { wizard } = build();
     const ctx = makeCtx();

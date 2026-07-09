@@ -16,7 +16,7 @@ export const NEWSEARCH_SCENE = 'newsearch';
 const OP_RENT = '🔑 Довгострокова оренда';
 const OP_SALE = '🏢 Продаж';
 const CITY_KYIV = '🏙 Київ';
-const ROOMS_ANY = 'Будь-яка';
+const ANY = 'Будь-яка';
 const OTHER = '✏️ Інше';
 const CANCEL = '❌ Відмінити';
 
@@ -125,7 +125,7 @@ export class NewSearchWizard {
     st.stage = 'rooms';
     await ctx.reply('3️⃣ Скільки <b>кімнат</b>?', {
       ...HTML,
-      ...Markup.keyboard([['1', '2', '3', '4+'], [ROOMS_ANY], [CANCEL]]).oneTime().resize(),
+      ...Markup.keyboard([['1', '2', '3', '4+'], [ANY], [CANCEL]]).oneTime().resize(),
     });
   }
 
@@ -161,6 +161,12 @@ export class NewSearchWizard {
   }
 
   private async handleArea(ctx: Scenes.SceneContext, st: WizardState, text: string) {
+    if (/будь/i.test(text)) {
+      // "Будь-яка" → no area limit.
+      st.areaMin = undefined;
+      st.areaMax = undefined;
+      return this.save(ctx, st);
+    }
     if (text === OTHER || /^інше/i.test(text)) {
       st.stage = 'areaManual';
       await ctx.reply(
@@ -220,9 +226,9 @@ export class NewSearchWizard {
 
   private async askArea(ctx: Scenes.SceneContext, st: WizardState) {
     st.stage = 'area';
-    await ctx.reply('5️⃣ Оберіть <b>площу</b> (м²) або «Інше» для ручного вводу:', {
+    await ctx.reply('5️⃣ Оберіть <b>площу</b> (м²), «Будь-яка» або «Інше» для ручного вводу:', {
       ...HTML,
-      ...Markup.keyboard([['30–60', 'до 45', 'до 80'], [OTHER], [CANCEL]]).oneTime().resize(),
+      ...Markup.keyboard([['30–60', 'до 45', 'до 80'], [ANY, OTHER], [CANCEL]]).oneTime().resize(),
     });
   }
 
