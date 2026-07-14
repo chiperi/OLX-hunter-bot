@@ -164,7 +164,16 @@ const domria: SiteSpec = {
       .map(String);
 
     // Fetch details ONLY for ids we haven't seen — capped per cycle by the budget.
-    const newIds = window.filter((id) => !cache!.known.has(id)).slice(0, ctx.cfg.domria.maxDetails);
+    const unfetched = window.filter((id) => !cache!.known.has(id));
+    const newIds = unfetched.slice(0, ctx.cfg.domria.maxDetails);
+    // Observability: if new listings outpace the detail budget, some can age out
+    // of the search window before ever being fetched → silently missed. Surface it.
+    if (unfetched.length > ctx.cfg.domria.maxDetails) {
+      ctx.logger?.warn(
+        `DOM.RIA[${cacheKey}]: ${unfetched.length} new listings but only ${ctx.cfg.domria.maxDetails} ` +
+          `fetched this cycle — backlog may age out; raise DOMRIA_MAX_DETAILS if this persists.`,
+      );
+    }
     for (const id of newIds) {
       try {
         const info: any = await ctx.getJson(`${baseUrl}/dom/info/${id}?api_key=${apiKey}&lang_id=4`);
