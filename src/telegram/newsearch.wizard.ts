@@ -4,7 +4,7 @@ import { Markup, Scenes } from 'telegraf';
 import { SearchCriteria } from '../sources/listing.interface';
 import { SearchProfilesService } from '../search-profiles/search-profiles.service';
 import { CANCELLED, describeProfile } from './telegram.copy';
-import { parseRange } from './parsing.util';
+import { parseRange, isNoConstraint } from './parsing.util';
 
 export const NEWSEARCH_SCENE = 'newsearch';
 
@@ -151,12 +151,12 @@ export class NewSearchWizard {
       );
       return;
     }
-    this.applyPrice(st, text);
+    if (!this.applyPrice(st, text)) return this.rejectRange(ctx, 'ціну');
     await this.askArea(ctx, st);
   }
 
   private async handlePriceManual(ctx: Scenes.SceneContext, st: WizardState, text: string) {
-    this.applyPrice(st, text);
+    if (!this.applyPrice(st, text)) return this.rejectRange(ctx, 'ціну');
     await this.askArea(ctx, st);
   }
 
@@ -176,13 +176,22 @@ export class NewSearchWizard {
       );
       return;
     }
-    this.applyArea(st, text);
+    if (!this.applyArea(st, text)) return this.rejectRange(ctx, 'площу');
     await this.save(ctx, st);
   }
 
   private async handleAreaManual(ctx: Scenes.SceneContext, st: WizardState, text: string) {
-    this.applyArea(st, text);
+    if (!this.applyArea(st, text)) return this.rejectRange(ctx, 'площу');
     await this.save(ctx, st);
+  }
+
+  /** Re-prompt (stay on the current stage) when a price/area reply wasn't understood. */
+  private async rejectRange(ctx: Scenes.SceneContext, what: string) {
+    await ctx.reply(
+      `Не зрозумів ${what}. Приклади: <code>до 20000</code>, <code>від 5000 до 15000</code>, ` +
+        `<code>5000-15000</code>, або <code>-</code> без обмеження.`,
+      HTML,
+    );
   }
 
   private async save(ctx: Scenes.SceneContext, st: WizardState) {
@@ -232,16 +241,22 @@ export class NewSearchWizard {
     });
   }
 
-  private applyPrice(st: WizardState, text: string) {
+  /** Apply a price range; returns false if the text was unrecognized (neither a
+   *  parseable range nor an explicit "no constraint") so the caller can re-prompt. */
+  private applyPrice(st: WizardState, text: string): boolean {
     const { min, max } = parseRange(text);
+    if (min == null && max == null && !isNoConstraint(text)) return false;
     st.priceMin = min;
     st.priceMax = max;
+    return true;
   }
 
-  private applyArea(st: WizardState, text: string) {
+  private applyArea(st: WizardState, text: string): boolean {
     const { min, max } = parseRange(text);
+    if (min == null && max == null && !isNoConstraint(text)) return false;
     st.areaMin = min;
     st.areaMax = max;
+    return true;
   }
 
   // --- helpers ------------------------------------------------------------
