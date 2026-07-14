@@ -53,6 +53,11 @@ export function parseRange(text: string): ParsedRange {
   return isMin ? { min: nums[0] } : { max: nums[0] };
 }
 
+/** True when the text is an explicit "no constraint" (skip word / dash / empty). */
+export function isNoConstraint(text: string): boolean {
+  return SKIP_WORDS.has((text ?? '').trim().toLowerCase());
+}
+
 export const OWNER_ONLY_LABEL = '🔑 Тільки власники';
 export const INCLUDE_ALL_LABEL = '🏢 Усі (з ріелторами)';
 

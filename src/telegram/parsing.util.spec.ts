@@ -1,5 +1,6 @@
 import {
   parseRange,
+  isNoConstraint,
   parseOwnerChoice,
   parseOptionalText,
   OWNER_ONLY_LABEL,
@@ -36,6 +37,15 @@ describe('parseRange', () => {
 
   it('returns {} when there are no digits', () => {
     expect(parseRange('abc')).toEqual({});
+  });
+});
+
+describe('isNoConstraint', () => {
+  it.each(['-', '', 'будь-яка', 'skip', 'не важливо'])('true for skip word %s', (t) => {
+    expect(isNoConstraint(t)).toBe(true);
+  });
+  it.each(['5000', 'до 10', 'бла бла'])('false for %s', (t) => {
+    expect(isNoConstraint(t)).toBe(false);
   });
 });
 

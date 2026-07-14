@@ -115,6 +115,24 @@ describe('NewSearchWizard', () => {
     expect(ctx.scene.state.areaMax).toBe(90);
   });
 
+  it('re-prompts on unrecognized price text instead of saving unbounded', async () => {
+    const { wizard, profiles } = build();
+    const ctx = makeCtx();
+    ctx.scene.state = { stage: 'price', operation: 'rent', city: 'Київ' };
+    await feed(wizard, ctx, 'бла бла');
+    expect(ctx.scene.state.stage).toBe('price'); // stayed on the step
+    expect(profiles.upsertForUser).not.toHaveBeenCalled();
+  });
+
+  it('accepts "-" as an explicit no-price constraint', async () => {
+    const { wizard } = build();
+    const ctx = makeCtx();
+    ctx.scene.state = { stage: 'price', operation: 'rent', city: 'Київ' };
+    await feed(wizard, ctx, '-');
+    expect(ctx.scene.state.stage).toBe('area'); // advanced
+    expect(ctx.scene.state.priceMax).toBeUndefined();
+  });
+
   it('rejects a non-Kyiv city', async () => {
     const { wizard } = build();
     const ctx = makeCtx();
