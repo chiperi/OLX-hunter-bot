@@ -143,6 +143,18 @@ describe('DOM.RIA spec', () => {
     expect(res[0].price).toBeNull(); // never mislabel $500 as 500 грн
   });
 
+  it('warns when new listings exceed the detail budget (H-2 observability)', async () => {
+    const dcfg = { ...cfg, domria: { ...cfg.domria, apiKey: 'k' } }; // maxDetails: 2
+    const warn = jest.fn();
+    const getJson = jest
+      .fn()
+      .mockResolvedValueOnce({ items: [1, 2, 3, 4, 5] }) // 5 new > budget of 2
+      .mockResolvedValue({ price: 9000, currency_type_id: 3, priceArr: { '3': '9 000' }, city_name: 'Київ' });
+    const ctx = { cfg: dcfg, getHtml: jest.fn(), getJson, logger: { warn } };
+    await SITE_SPECS.domria.fetch!(ctx as any, criteria);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('DOMRIA_MAX_DETAILS'));
+  });
+
   it('fetches details only for NEW ids on a second cycle (opt-2 cache)', async () => {
     const dcfg = { ...cfg, domria: { ...cfg.domria, apiKey: 'k' } };
     const info = (id: number) => ({

@@ -125,6 +125,13 @@ Two realistic failure modes:
    conservative.
 2. **Anti-scraping on the HTML sites** — the droplet is a datacenter IP, which
    the HTML sites may rate-limit or block (relevant once those are wired).
+3. **DOM.RIA detail-budget saturation** — DOM.RIA is searched with price pushed
+   server-side, but **area/rooms are filtered client-side** after the detail
+   fetch. So a narrow-area profile spends much of its `DOMRIA_MAX_DETAILS` budget
+   on listings that get discarded, and in a high-volume bucket some new listings
+   can age out of the search window before being fetched (a silent coverage
+   loss). The DOM.RIA source logs a warning when new listings outpace the budget
+   in a cycle — if you see it, **raise `DOMRIA_MAX_DETAILS`** for that deployment.
 
 **What's already built in** (`src/sources/http-listing-source.ts`): jittered
 poll interval (`POLL_INTERVAL_MS ± POLL_JITTER_MS`), retry with exponential

@@ -10,6 +10,8 @@ export interface SiteContext {
   cfg: SourcesConfig;
   getHtml(url: string): Promise<string>;
   getJson<T = any>(url: string): Promise<T>;
+  /** Per-source logger for specs that need to surface operational signals. */
+  logger?: Logger;
 }
 
 /**
@@ -83,6 +85,7 @@ export class HttpListingSource implements ListingSource {
         cfg: this.cfg,
         getHtml: (url) => this.getHtml(url),
         getJson: (url) => this.getJson(url),
+        logger: this.logger,
       };
       if (this.spec.fetch) {
         return await this.spec.fetch(ctx, criteria);
