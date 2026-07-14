@@ -99,18 +99,29 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     }
 
     const sourceIds = this.sources.ids;
-    // Fetch each unique (source, upstream request) at most once per cycle and
-    // cache it, so profiles that resolve to the same real request share the call
-    // — e.g. two users both searching Kyiv rent hit each site once, not twice.
-    const cache = new Map<string, Listing[]>();
     const cacheKey = (sourceId: string, criteria: SearchProfile['criteria']) =>
       `${sourceId}::${this.sources.requestKey(sourceId, criteria)}`;
+
+    // Collect the unique (source, upstream request) pairs so profiles resolving
+    // to the same real request share one call — e.g. two users both searching
+    // Kyiv rent hit each site once, not twice.
+    const jobs = new Map<string, { sourceId: string; criteria: SearchProfile['criteria'] }>();
     for (const sourceId of sourceIds) {
       for (const p of active) {
         const key = cacheKey(sourceId, p.criteria);
-        if (!cache.has(key)) cache.set(key, await this.sources.fetchOne(sourceId, p.criteria));
+        if (!jobs.has(key)) jobs.set(key, { sourceId, criteria: p.criteria });
       }
     }
+
+    // Run the unique fetches concurrently (each fetchOne returns [] on failure,
+    // so Promise.all never rejects) — cycle time no longer grows linearly with
+    // the number of distinct searches.
+    const cache = new Map<string, Listing[]>();
+    await Promise.all(
+      [...jobs].map(async ([key, { sourceId, criteria }]) => {
+        cache.set(key, await this.sources.fetchOne(sourceId, criteria));
+      }),
+    );
 
     this.logger.debug(
       `Cycle: ${active.length} active profile(s), ${cache.size} unique fetch(es) across ${sourceIds.length} source(s).`,
